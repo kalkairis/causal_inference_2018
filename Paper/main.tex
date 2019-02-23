@@ -4,7 +4,7 @@
 \title{Shap-based Average Treatment Effect Calculations}
 \author{Rossman, Hagai
         \and
-        Yacovzada, Nancy-Sara
+        Yacovzada, Nancy
         \and
         Kalka, Iris}
 \date{January 2019}
@@ -16,13 +16,21 @@
 \section{Abstract}
 
 \section{Introduction}
-
+Propensity score (PS) techniques, as formalized by Rosenbaum and Rubin \cite{rosenbaum1983central}, enable  controlling confounding in non experimental studies in medicine and epidemiology. 
+A central issue facing researchers using PS methods is how to select the variables to be included in the PS model. The bias and variance of the estimated exposure effect can depend strongly on which of these candidate variables are included in the PS model \cite{brookhart2006variable}.
+A possible limitation of PS methods, as described by Rubin in \cite{rubin1997estimating}, is that a covariate related to treatment assignment but unrelated to the outcome is handled the same as a covariate related to treatment but also strongly related to outcome. 
+This can be a limitation of propensity scores, since inclusion of irrelevant covariates reduces the efficiency of an estimated exposure effect.  However, it is claimed that if such a variable had even a weak effect on the outcome, the bias resulting from its exclusion would dominate any loss of efficiency for a reasonable-sized study. 
 \section{Methods}
-
+\subsection{Data Simulations}
+The Z-Bias generation process \cite{myers2011effects}
 \section{Results}
 
 \section{Discussion}
 
+
 \section{References}
+
+\bibliographystyle{unsrt}
+\bibliography{references.bib}
 
 \end{document}
