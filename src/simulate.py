@@ -1,9 +1,9 @@
-#TODO: return a dataframe where last two columns are T and Y
-#TODO: A frame of X,effects_T, effects_Y
-#TODO: Add a second dataframe of Unobserveds
-#TODO: feature types (Z, U, X_M (mediator), X_C (collider), M, W)
-#TODO: add true ATE
-#TODO: move random seed outside of kang shafer
+# TODO: return a dataframe where last two columns are T and Y
+# TODO: A frame of X,effects_T, effects_Y
+# TODO: Add a second dataframe of Unobserveds
+# TODO: feature types (Z, U, X_M (mediator), X_C (collider), M, W)
+# TODO: add true ATE
+# TODO: move random seed outside of kang shafer
 from src.simulation_functions import kang_shafer_data
 
 
@@ -25,12 +25,12 @@ class Simulator:
     simulation_types = ['kang_shafer', 'ACIC', 'z_bias']
 
     def simulate_single_case(self):
-        if self.sim_type=='kang_shafer':
+        if self.sim_type == 'kang_shafer':
             tmp = kang_shafer_data(*self.sim_args, **self.sim_kwargs)
             return tmp
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     S = Simulator('kang_shafer', num_samples=100)
     tmp1 = S.simulate_single_case()
     tmp2 = S.simulate_single_case()
