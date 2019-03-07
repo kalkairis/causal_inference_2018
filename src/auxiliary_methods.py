@@ -34,14 +34,14 @@ def get_trained_model(x, y, base_estimator='sklearn.ensemble.gradient_boosting.G
     return m
 
 
-def get_propensity_score(x, y):
+def get_propensity_score(x, t):
     """
 
     :param x:
-    :param y:
+    :param t:
     :return:
     """
-    m = get_trained_model(x, y)
+    m = get_trained_model(x, t, 'sklearn.ensemble.gradient_boosting.GradientBoostingClassifier')
     return m.predict_proba(x)
 
 
@@ -93,10 +93,10 @@ def calc_inv_propensity_score_weighting(df):
     # List of outcomes Y for subjects that didn't receive treatment (T=0)
     B = df.loc[df['T'] == 0, ['Y']].values.reshape(-1)
 
-    propensity_scores = get_propensity_score(df.drop('Y', axis=1).df['Y'])
+    propensity_scores = get_propensity_score(df.drop(columns=['T', 'Y']), df['T'])
 
     # The weight for a control subject is defined as e(X)/1−e(X)
-    C = (propensity_scores / (1 - propensity_scores))[(df['T'] == 0).values].values
+    C = (propensity_scores / (1 - propensity_scores))[(df['T'] == 0).values]eht
 
     # The IPW estimator for ATT
     IPW_ATT = (1 / n1 * A - ((np.dot(B, C)).sum() / C.sum()))
