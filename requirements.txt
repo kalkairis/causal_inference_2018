@@ -1,3 +1,4 @@
+shap
 numpy
 pandas
 scipy
