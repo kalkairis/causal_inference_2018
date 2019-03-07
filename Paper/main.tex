@@ -13,20 +13,35 @@
 
 \maketitle
 
-\section{Abstract}
-
 \section{Introduction}
-Propensity score (PS) techniques, as formalized by Rosenbaum and Rubin \cite{rosenbaum1983central}, enable  controlling confounding in non experimental studies in medicine and epidemiology. 
-A central issue facing researchers using PS methods is how to select the variables to be included in the PS model. The bias and variance of the estimated exposure effect can depend strongly on which of these candidate variables are included in the PS model \cite{brookhart2006variable}.
-A possible limitation of PS methods, as described by Rubin in \cite{rubin1997estimating}, is that a covariate related to treatment assignment but unrelated to the outcome is handled the same as a covariate related to treatment but also strongly related to outcome. 
-This can be a limitation of propensity scores, since inclusion of irrelevant covariates reduces the efficiency of an estimated exposure effect.  However, it is claimed that if such a variable had even a weak effect on the outcome, the bias resulting from its exclusion would dominate any loss of efficiency for a reasonable-sized study. 
+Causal inference from observational data is a crucial an challenging field of work. Often works rely on assessing potential outcomes in order to estimate treatment effects \cite{neyman1923application}\cite{rubin1974estimating}. Many techniques, such as propensity score (PS) techniques, as formalized by Rosenbaum and Rubin \cite{rosenbaum1983central}, model observed data to predict treatment effects. These techniques enable  controlling confounding in non experimental studies in medicine and epidemiology. 
+
+A central issue facing researchers using such methods is how to select the variables to be included in the model estimating for treatment effect. The bias and variance of the estimated exposure effect can depend strongly on which of these candidate variables are included in the PS model \cite{brookhart2006variable}.
+
+One assumption in the potential outcomes framework is ignorability, meaning that there are no unmeasured confounders \cite{rosenbaum1983central}. More specificly the assumption of ignorability demands that potential outcomes are independent of treatment assignment, conditioned on the set of observed covariates.
+
+A possible limitation of PS methods, as described by Rubin in \cite{rubin1997estimating}, is that a covariate related to treatment assignment but unrelated to the outcome is handled the same as a covariate related to treatment but also strongly related to outcome. Such inclusion of irrelevant covariates might reduce the efficiency of an estimated treatment effect \cite{10.1093/biomet/asx009}. In some cases the use of pretreatment covariates might even increase bias of treatment effect estimators.
+
+Our work is based on an assumption that every covariate can be treated as a covariate effecting both the treatment and the outcome. We believe that the size of the effect can be computed and taken into account such that pretreatment covariates are nearly ignored whereas other treatments are taken into account. 
+
+
 \section{Methods}
-\subsection{Data Simulations}
+We compare treatment effect evaluation using several methods. We separate the methods to baseline methods already available in the literature: methods based on an estimator predicting the treatment; methods based on an estimator predicting the outcome; and methods based on two estimators one predicting treatment and the other predicting outcome.
+
+For all of these evaluations we used the Scikit-Learn gradient boosting predictors with default parameters \cite{scikit-learn}. 
+
+\subsection{Baseline}
+
+
+
 The Z-Bias generation process \cite{myers2011effects}
-\section{Results}
+
+\subsection{Results}
+
 
 \section{Discussion}
 
+\section{Future Work}
 
 \section{References}
 
