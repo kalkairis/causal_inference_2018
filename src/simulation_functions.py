@@ -3,6 +3,7 @@ import sys
 from os import path
 
 import numpy as np
+import pandas as pd
 
 try:
     from src.simulation_iterator import SimulationIterator
@@ -35,7 +36,7 @@ def kang_shafer_data(size=(1,), random_seed=0, X_observed=True):
         for estimating a population mean from incomplete data. Statistical science, 22(4):523–539, 2007.
         
     """
-    np.random.seed = random_seed
+    np.random.seed(random_seed)
     X1 = np.random.normal(0, 1, size=size)
     X2 = np.random.normal(0, 1, size=size)
     X3 = np.random.normal(0, 1, size=size)
@@ -50,13 +51,13 @@ def kang_shafer_data(size=(1,), random_seed=0, X_observed=True):
     y = np.random.normal(E_Y, 1)
 
     if X_observed:
-        return X1, X2, X3, X4, t, y
+        return pd.DataFrame({'x1': X1, 'x2': X2, 'x3': X3, 'x4': X4, 'T': t, 'Y': y})
     else:  # Xs are "not observed" , but a nonlinear transformation of them is
         X1_t = np.exp(X1 / 2)
         X2_t = (X2 / (1 + np.exp(X1))) + 10
         X3_t = (((X1 * X3) / 25) + 0.6) ** 3
         X4_t = (X2 + X4 + 20) ** 2
-        return X1_t, X2_t, X3_t, X4_t, t, y
+        return pd.DataFrame({'x1_t': X1_t, 'x2_t': X2_t, 'x3_t': X3_t, 'x4_t': X4_t, 'T': t, 'Y': y})
 
 
 def get_ACIC_2019_datasets(high_dim=True, test=True):
