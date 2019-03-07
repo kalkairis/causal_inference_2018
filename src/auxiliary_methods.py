@@ -1,3 +1,4 @@
+import pandas as pd
 from heapq import nsmallest
 
 import numpy as np
@@ -18,14 +19,17 @@ def calc_distance(x, func="euclidean"):
     return distance.squareform(distance.pdist(x, metric=func))
 
 
-def get_trained_model(x, y, base_estimator=sklearn.ensemble.gradient_boosting):
+def get_trained_model(x, y, base_estimator='sklearn.ensemble.gradient_boosting.GradientBoostingRegressor'):
     """
     Trains the model and return it
     :param x: matrix
     :param y: predicted
+    :param base_estimator: String with the name of the base estimator
+        (default value is 'sklearn.ensemble.gradient_boosting.GradientBoostingRegressor')
     :return: trained model
     """
-    m = base_estimator()
+    __import__(base_estimator.split('.')[0])
+    m = eval(base_estimator + '()')
     m.fit(x, y)
     return m
 
@@ -49,6 +53,7 @@ def get_inverse_propensity_weighing(x, y):
     :return:
     """
     propensity = get_propensity_score(x, y)
+    return propensity
 
 
 def calc_inv_propensity_score_weighting(df):
@@ -99,24 +104,6 @@ def calc_inv_propensity_score_weighting(df):
     return IPW_ATT[0]
 
 
-# def get_matching_pairs(df, dist_func, n_neighbors=1):
-#     """
-#
-#     :param df:
-#     :param dist_func:
-#     :return:
-#     """
-#     df_0 = df.loc[df['T'] == 0].drop('T', axis=1)
-#     x_0 = df_0.drop('Y', axis=1)
-#     y_0 = df_0['Y']
-#     df_1 = df.loc[df['T'] == 1].drop('T', axis=1)
-#     x_1 = df_1.drop('Y', axis=1)
-#     y_1 = df_1['Y']
-#
-#     knn = sklearn.neighbors.KNeighborsClassifier(n_neighbors=n_neighbors, metric=dist_func, algorithm='ball_tree')
-#
-
-
 def calc_matching(df, dist_func='euclidean', k=1):
     """
     Computes the Average Treatment Effect on the treated through matching.
@@ -129,26 +116,26 @@ def calc_matching(df, dist_func='euclidean', k=1):
     :param k: Number of neighbors to consider.
     :return: An Average Treatment Effect scalar.
     """
-    x = df.loc[df['T'] == 0].drop(['T', 'Y'], axis=1)
+    x = df.drop(['T', 'Y'], axis=1)
 
     d = calc_distance(x.values, dist_func)
 
     ATTs = []
 
     # Get the treated (T=1) and controls (T=0)
-    idx_treated = range(df.shape[0])[df['T'] == 1]
-    idx_untreated = range(df.shape[0])[df['T'] == 0]
+    idx_treated = [i for i, v in enumerate((df['T'] == 1).values) if v]
+    idx_untreated = [i for i, v in enumerate((df['T'] == 0).values) if v]
 
     # For every subject with T=1, calculate the average Y0 of its neighbors
     for index in idx_treated:
         # Get outcome of current treated
-        current_outcome = df.iloc[index, 'Y']
+        current_outcome = df.iloc[index]['Y']
 
         # Finding the k-closest neighbors in T=0 based on their propensity score
         neighbors_indices = nsmallest(k, idx_untreated, key=lambda untreated_index: d[index, untreated_index])
 
         # Get the outcome of neighbors
-        neighbors_outcome = [df.iloc[idx, 'Y'] for idx in neighbors_indices]
+        neighbors_outcome = [df.iloc[idx]['Y'] for idx in neighbors_indices]
 
         # Average the outcome of neighbors, and then subtract with Y1 outcome (current_outcome)
         avg_outcome = current_outcome - np.mean(neighbors_outcome)
@@ -170,7 +157,8 @@ def get_shap_values(model, x):
     """
     explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(x)
-    return shap_values
+    shap_values_df = pd.DataFrame(data=shap_values, columns=x.columns)
+    return shap_values_df
 
 
 def calc_model_t_shap_matching(df, dist_func='euclidean', k=1):
@@ -203,7 +191,11 @@ def calc_model_y_shap_matching(df, dist_func='euclidean', k=1):
     x = df.drop(columns=['Y'])
     t = df['T']
     y = df['Y']
-    model = get_trained_model(x, y)
+    try:
+        model = get_trained_model(x, y)
+    except:
+        print("Failed running: model = get_trained_model(x, y)")
+        return {'x':x, 'y':y, 't':t}
     shap_values = get_shap_values(model, x)
     features_and_outcomes = shap_values.copy()
     features_and_outcomes.drop(columns=['T'], inplace=True)
@@ -237,7 +229,7 @@ def calc_model_y_and_model_t_shap_matching(df, combining_method='ratio', dist_fu
         combined_values = np.true_divide(shap_y_values.drop(columns=['T']), shap_t_values)
     else:
         raise IOError(
-            f"combining_method is {combining_method} which is not implememnted in "
+            f"combining_method is {combining_method} which is not implemented in "
             f"calc_model_y_and_model_t_shap_matching.")
 
     combined_values['T'] = t
