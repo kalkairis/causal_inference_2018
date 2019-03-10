@@ -43,7 +43,7 @@ def kang_shafer_data(size=(1,), random_seed=0, X_observed=True):
     X4 = np.random.normal(0, 1, size=size)
 
     true_propensity = 1 / (1 + np.exp(X1 - 0.5 * X2 + 0.25 * X3 + 0.1 * X4))
-    t = (true_propensity >= 0.5).astype(int)
+    t = np.apply_along_axis(lambda p: np.random.binomial(1, p), 0, true_propensity)
     # print(X1, X2, X3, X4, true_propensity, A)
 
     E_Y = 210 + t + 27.4 * X1 + 13.78 * X2 + 13.7 * X3 + 13.7 * X4
