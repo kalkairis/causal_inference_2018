@@ -43,8 +43,8 @@ We use the following equation for calculation of ATT:
 \begin{equation*}
     \begin{split}
         ATT = & \mathbb{E}[Y_1 - Y_0 | T=1] \\
-        & \mathbb{E}_X[\mathbb{E}[Y_1 - Y_0 | X, T=1]] \\
-        & \mathbb{E}_X[\mathbb{E}[Y_1 | X, T=1] - \mathbb{E}[Y_0 | X, T=1]]
+        = & \mathbb{E}_X[\mathbb{E}[Y_1 - Y_0 | X, T=1]] \\
+        = & \mathbb{E}_X[\mathbb{E}[Y_1 | X, T=1] - \mathbb{E}[Y_0 | X, T=1]]
     \end{split}
 \end{equation*}
 
@@ -86,6 +86,32 @@ At this point each individual is represented with two vectors of length $M$ (num
 Distances between individuals are computed using either Euclidean or Mahalanobis distances on combined vectors. ATT is computed using matching based on the distance matrix.
 
 \subsection{Simulation}
+\subsubsection{Kang-Schafer}
+Our first method of simulation is the Kang-Schafer method for creating simulated data \cite{kang2007demystifying}. This method assigns four random covariates for every individual ($x_i^j~\mathcal{N}(0,1)$ for every $i\in{}\{1,2,3,4\}$). 
+Propensity is then computed in the following way:
+\begin{equation*}
+    p(T=1| X=x) = \frac{1}{1 + \exp{(x_1 - \frac{x_2}{2} + \frac{x_3}{4} + \frac{x_4}{10})}}
+\end{equation*}
+
+We then assign treatment using the true propensity score as the probability for a binomial variable, yielding treatment assignments that are binary. 
+
+Given both the covariates and the treatment assignments, we compute a expected outcome as:
+\begin{equation*}
+    \mathbb{E}[Y|X=x, T=t] = 210 + t + 27.4 \cdot{} x_1 + 13.78 \cdot{} x_2 + 13.7 \cdot{} x_3 + 13.7 \cdot{} x_4
+\end{equation*}
+
+Under the strong ignorability assumption and equations from the Kang-Schafer paper we can compute the true ATT using the following steps:
+\begin{equation*}
+    \begin{split}
+        ATT = & \mathbb{E}[Y_1 | X=x, T=1] - \mathbb{E}[Y_0 | X=x, T=1] \\
+        \mathbb{E}[Y_1|T=1, X=x] = & \mathbb{E}[Y|T=1, X=x] \\
+        \mathbb{E}[Y_0|T=1, X=x] = & \mathbb{E}[Y_0|T=0, X=x] = \mathbb{E}[Y|T=0, X=x] \\
+    \end{split}
+\end{equation*}
+Therefore $ATT=\mu{}^{(1)} - \mu{}^{(0)} = 200-220 = -20$ 
+%TODO: is this not actually 20?
+
+\subsubsection{Z-Bias}
 
 The Z-Bias generation process \cite{myers2011effects}
 
@@ -101,4 +127,4 @@ The Z-Bias generation process \cite{myers2011effects}
 \bibliographystyle{unsrt}
 \bibliography{references.bib}
 
-\end{document}
+\end{document}Y1Y1
