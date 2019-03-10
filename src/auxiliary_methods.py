@@ -161,12 +161,12 @@ def get_shap_values(model, x):
     return shap_values_df
 
 
-def calc_model_t_shap_matching(df, dist_func='euclidean', k=1):
+def calc_model_t_shap_matching(df, dist_func='euclidean', k=[1]):
     """
     Compute the Average Treatment Effect by matching based on Shap values of the model predicting T.
     :param df: A DataFrame of individuals.
     :param dist_func: A distance metric for Scipy's pdist function.
-    :param k: Number of neighbors to consider.
+    :param k: Number of neighbors to consider. This value comes as an array so that all possible values are considered.
     :return: Average Treatment Effect.
     """
     x = df.drop(columns=['Y', 'T'])
@@ -176,16 +176,19 @@ def calc_model_t_shap_matching(df, dist_func='euclidean', k=1):
     features_and_outcomes = shap_values.copy()
     features_and_outcomes['T'] = t
     features_and_outcomes['Y'] = df['Y']
-    ATT = calc_matching(features_and_outcomes, dist_func=dist_func, k=k)
-    return ATT
+    ATTs = []
+    for current_k in k:
+        ATT = calc_matching(features_and_outcomes, dist_func=dist_func, k=current_k)
+        ATTs.append(ATT)
+    return ATTs
 
 
-def calc_model_y_shap_matching(df, dist_func='euclidean', k=1):
+def calc_model_y_shap_matching(df, dist_func='euclidean', k=[1]):
     """
     Compute the Average Treatment Effect by matching based on Shap values of the model predicting Y.
     :param df: A DataFrame of individuals.
     :param dist_func: A distance metric for Scipy's pdist function.
-    :param k: Number of neighbors to consider.
+    :param k: Number of neighbors to consider. This value comes as an array so that all possible values are considered.
     :return: Average Treatment Effect.
     """
     x = df.drop(columns=['Y'])
@@ -201,18 +204,21 @@ def calc_model_y_shap_matching(df, dist_func='euclidean', k=1):
     features_and_outcomes.drop(columns=['T'], inplace=True)
     features_and_outcomes['T'] = t
     features_and_outcomes['Y'] = y
-    ATT = calc_matching(features_and_outcomes, dist_func=dist_func, k=k)
-    return ATT
+    ATTs = []
+    for current_k in k:
+        ATT = calc_matching(features_and_outcomes, dist_func=dist_func, k=current_k)
+        ATTs.append(ATT)
+    return ATTs
 
 
-def calc_model_y_and_model_t_shap_matching(df, combining_method='ratio', dist_func='euclidean', k=1):
+def calc_model_y_and_model_t_shap_matching(df, combining_method='ratio', dist_func='euclidean', k=[1]):
     """
     Compute the Average Treatment Effect by matching based on Shap value of both Y predicting and T predicting models.
     :param df: A DataFrame of individuals.
     :param combining_method: The method of combining shap values of both models. Available methods:
         - 'ratio': ratio of Y-based Shap values divided by T-based Shap values.
     :param dist_func: A distance metric for Scipy's pdist function.
-    :param k: Number of neighbors to consider.
+    :param k: Number of neighbors to consider. This value comes as an array so that all possible values are considered.
     :return: Average Treatment Effect.
     """
     x = df.drop(columns=['Y'])
@@ -234,5 +240,8 @@ def calc_model_y_and_model_t_shap_matching(df, combining_method='ratio', dist_fu
 
     combined_values['T'] = t
     combined_values['Y'] = y
-    ATT = calc_matching(combined_values, dist_func=dist_func, k=k)
-    return ATT
+    ATTs = []
+    for current_k in k:
+        ATT = calc_matching(combined_values, dist_func=dist_func, k=current_k)
+        ATTs.append(ATT)
+    return ATTs
