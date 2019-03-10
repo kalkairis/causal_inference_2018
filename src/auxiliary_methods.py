@@ -65,7 +65,7 @@ def calc_inv_propensity_score_weighting(df):
 
     Under SITA: E(Y0|X,T=1) = E(Y0|X,T=0)
 
-    Therefore: ATT = E_X ( E(Y1|X,T=1) − E(Y0|X,T=0) )
+    Therefore: ATT = E11_X ( E(Y1|X,T=1) − E(Y0|X,T=0) )
 
     Using propensity score e(X) we obtain:
     ATT = E_e(X) ( E(Y1|e(X),T=1) − E(Y0|e(X),T=0) )
@@ -96,7 +96,7 @@ def calc_inv_propensity_score_weighting(df):
     propensity_scores = get_propensity_score(df.drop(columns=['T', 'Y']), df['T'])
 
     # The weight for a control subject is defined as e(X)/1−e(X)
-    C = (propensity_scores / (1 - propensity_scores))[(df['T'] == 0).values]eht
+    C = (propensity_scores / (1 - propensity_scores))[(df['T'] == 0).values]
 
     # The IPW estimator for ATT
     IPW_ATT = (1 / n1 * A - ((np.dot(B, C)).sum() / C.sum()))
