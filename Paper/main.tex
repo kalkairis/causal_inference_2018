@@ -1,5 +1,7 @@
 \documentclass{article}
 \usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
 
 \title{Shap-based Average Treatment Effect Calculations}
 \author{Kalka, Iris
@@ -28,11 +30,62 @@ Our work is based on an assumption that every covariate can be treated as a cova
 \section{Methods}
 We compare treatment effect evaluation using several methods. We separate the methods to baseline methods already available in the literature: methods based on an estimator predicting the treatment; methods based on an estimator predicting the outcome; and methods based on two estimators one predicting treatment and the other predicting outcome.
 
+We compare methods by looking at the predicted Average Treatement Effect on Treated (ATT) compared with the true known ATT. Let us recall the definition of ATT:
+\begin{equation*}
+    ATT = \mathbb{E}[]Y_1 - Y_0 | T=1]
+\end{equation*}
+
 For all of these evaluations we used the Scikit-Learn gradient boosting predictors with default parameters \cite{scikit-learn}. 
 
 \subsection{Baseline}
+Our first method of estimating ATT is Inverse Propensity Score Weighting (IPW).
+We use the following equation for calculation of ATT:
+\begin{equation*}
+    \begin{split}
+        ATT = & \mathbb{E}[Y_1 - Y_0 | T=1] \\
+        & \mathbb{E}_X[\mathbb{E}[Y_1 - Y_0 | X, T=1]] \\
+        & \mathbb{E}_X[\mathbb{E}[Y_1 | X, T=1] - \mathbb{E}[Y_0 | X, T=1]]
+    \end{split}
+\end{equation*}
+
+Under strongly ignorable treatment assumption the potential outcomes $Y_0$, $Y_1$ are independent of the treatment selection given the observed covariates $X$. Therefore:
+\begin{equation*}
+    ATT = \mathbb{E}_X[\mathbb{E}[Y_1|X, T=1] - \mathbb{E}[Y_0 | X, T=0]]
+\end{equation*}
+
+Thus we use the propensity score and the inverse probability of treatment weighting to compute ATT \cite{abdia2017propensity}. 
+
+The two other methods of baseline estimation relay on matching functions. For every treated individual we locate the most similar untreated individual. Thus estimating the treatment effect for every treated individual. This method uses the Scikit-learn Nearest neighbors tool for identification of the most similar individual \cite{scikit-learn}. 
+
+Given a distance matrix between all individuals ATT is computed through matching by calculating the average difference in outcome for every treated individual. This is done by the difference between the individual's true outcome and the mean outcome of $k$ nearest untreated neighbors based on the given distance matrix. The total ATT is then the average of all treated individuals' average difference in outcome.
+
+Distance (and inversely similarity) between individuals is computed based solely on the propensity score computed for each individual. The two methods of distance used by us are Euclidean distance and Mahalanobis distance.
 
 
+\subsection{Based on treatment prediction}
+When accounting for the difference in effects of each covariate we chose to look at the feature importances in the treatment predictor. In order to make the different features importances comparable we use SHapley Additive exPlanations (SHAP) values \cite{lundberg2017unified}. These values are scalar values explaining the individual contribution of each covariate for each individual in the estimation of the treatment. 
+
+Given a matrix of $N\times{}M$ covariates (where $N$ is the number of individuals and $M$ is the number of covariates) we create a single predictor $\mathcal{M}$ from the covariates to the treatment (marked a as a binary value). We then compute the SHAP values of $\mathcal{M}$ for every individual resulting in an $N\times{}M$ matrix. 
+
+Our distances are computed based on the SHAp values matrix using either Euclidean of Mahalanobis distance for every two individuals. Afterwards the ATT is calculated using matching. 
+
+\subsection{Based on outcome prediction}
+We create a single predictor that predicts the outcome given both an $N\times{}M$ matrix of covariates and a boolean vector of length $N$ of the treatment. After prediction of outcome we compute the SHAP values of all input values, giving us a matrix of size $N\times{}(M+1)$. 
+
+Our computed distance should be reflective only on pretreatment features. It should not account for whether an individual is treated or not. Therefore, we remove the SHAP value respective of the treatment assignment, yielding us a matrix of $N\times{}M$. 
+
+The given matrix is then used to compute distances either through Euclidean distance of Mahalanobis distance between every two individuals. ATT is then calculated using matching based on the distance measures. 
+
+\subsection{Based on treatment prediction and outcome prediction}
+We create two predictors. One predictor $\mathcal{M}_T$ predicts the treatment assignment from covariates.The second predictor $mathcal{M}_Y$ predicts the outcome from both the covariates and the treatment assignment. 
+
+We compute the SHAP values from both treatment and outcome predictions ($S_T$ and $S_Y$ respectively). In order to have comparable SHAP values we remove the column related to treatment from the $S_Y$ matrix. 
+
+At this point each individual is represented with two vectors of length $M$ (number of covariates). We then join the vectors by dividing the values in $S_Y$ by those in $S_T$ in an element-wise division. Thus each person is represented with a single combined vector of length $M$.
+
+Distances between individuals are computed using either Euclidean or Mahalanobis distances on combined vectors. ATT is computed using matching based on the distance matrix.
+
+\subsection{Simulation}
 
 The Z-Bias generation process \cite{myers2011effects}
 
