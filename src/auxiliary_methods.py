@@ -1,10 +1,9 @@
-import pandas as pd
 from heapq import nsmallest
-
+import sklearn
 import numpy as np
+import pandas as pd
 import scipy.spatial.distance as distance
 import shap
-import sklearn
 
 
 def calc_distance(x, func="euclidean"):
@@ -104,7 +103,7 @@ def calc_inv_propensity_score_weighting(df):
     return IPW_ATT[0]
 
 
-def calc_matching(df, dist_func='euclidean', k=1):
+def calc_matching(df, dist_func='euclidean', k=[1], d=None):
     """
     Computes the Average Treatment Effect on the treated through matching.
     :param df: DataFrame with the following columns:
@@ -114,38 +113,42 @@ def calc_matching(df, dist_func='euclidean', k=1):
     :param dist_func: Distance metric for evaluating the distances between individuals.
         Will be used as a scipy.distance metric.
     :param k: Number of neighbors to consider.
+    :param d: A distance matrix, will be calculated if not given
     :return: An Average Treatment Effect scalar.
     """
     x = df.drop(['T', 'Y'], axis=1)
 
-    d = calc_distance(x.values, dist_func)
-
-    ATTs = []
+    if d is None:
+        d = calc_distance(x.values, dist_func)
 
     # Get the treated (T=1) and controls (T=0)
     idx_treated = [i for i, v in enumerate((df['T'] == 1).values) if v]
     idx_untreated = [i for i, v in enumerate((df['T'] == 0).values) if v]
 
+    ATTs = []
     # For every subject with T=1, calculate the average Y0 of its neighbors
-    for index in idx_treated:
-        # Get outcome of current treated
-        current_outcome = df.iloc[index]['Y']
+    for current_k in k:
+        current_ATTs = []
+        for index in idx_treated:
+            # Get outcome of current treated
+            current_outcome = df.iloc[index]['Y']
 
-        # Finding the k-closest neighbors in T=0 based on their propensity score
-        neighbors_indices = nsmallest(k, idx_untreated, key=lambda untreated_index: d[index, untreated_index])
+            # Finding the k-closest neighbors in T=0 based on their propensity score
+            neighbors_indices = nsmallest(current_k, idx_untreated,
+                                          key=lambda untreated_index: d[index, untreated_index])
 
-        # Get the outcome of neighbors
-        neighbors_outcome = [df.iloc[idx]['Y'] for idx in neighbors_indices]
+            # Get the outcome of neighbors
+            neighbors_outcome = [df.iloc[idx]['Y'] for idx in neighbors_indices]
 
-        # Average the outcome of neighbors, and then subtract with Y1 outcome (current_outcome)
-        avg_outcome = current_outcome - np.mean(neighbors_outcome)
+            # Average the outcome of neighbors, and then subtract with Y1 outcome (current_outcome)
+            avg_outcome = current_outcome - np.mean(neighbors_outcome)
 
-        ATTs.append(avg_outcome)
+            current_ATTs.append(avg_outcome)
 
-    # ATT matching by propensity
-    ATT = sum(ATTs) / len(ATTs)
+        # ATT matching by propensity
+        ATTs.append(sum(current_ATTs) / len(current_ATTs))
 
-    return ATT
+    return ATTs
 
 
 def get_shap_values(model, x):
@@ -176,10 +179,7 @@ def calc_model_t_shap_matching(df, dist_func='euclidean', k=[1]):
     features_and_outcomes = shap_values.copy()
     features_and_outcomes['T'] = t
     features_and_outcomes['Y'] = df['Y']
-    ATTs = []
-    for current_k in k:
-        ATT = calc_matching(features_and_outcomes, dist_func=dist_func, k=current_k)
-        ATTs.append(ATT)
+    ATTs = calc_matching(features_and_outcomes, dist_func=dist_func, k=k)
     return ATTs
 
 
@@ -198,16 +198,13 @@ def calc_model_y_shap_matching(df, dist_func='euclidean', k=[1]):
         model = get_trained_model(x, y)
     except:
         print("Failed running: model = get_trained_model(x, y)")
-        return {'x':x, 'y':y, 't':t}
+        return {'x': x, 'y': y, 't': t}
     shap_values = get_shap_values(model, x)
     features_and_outcomes = shap_values.copy()
     features_and_outcomes.drop(columns=['T'], inplace=True)
     features_and_outcomes['T'] = t
     features_and_outcomes['Y'] = y
-    ATTs = []
-    for current_k in k:
-        ATT = calc_matching(features_and_outcomes, dist_func=dist_func, k=current_k)
-        ATTs.append(ATT)
+    ATTs = calc_matching(features_and_outcomes, dist_func=dist_func, k=k)
     return ATTs
 
 
@@ -240,8 +237,5 @@ def calc_model_y_and_model_t_shap_matching(df, combining_method='ratio', dist_fu
 
     combined_values['T'] = t
     combined_values['Y'] = y
-    ATTs = []
-    for current_k in k:
-        ATT = calc_matching(combined_values, dist_func=dist_func, k=current_k)
-        ATTs.append(ATT)
+    ATTs = calc_matching(combined_values, dist_func=dist_func, k=k)
     return ATTs
