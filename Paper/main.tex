@@ -2,6 +2,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage{amsmath}
 \usepackage{amssymb}
+\usepackage{graphicx}
 
 \title{Shap-based Average Treatment Effect Calculations}
 \author{Kalka, Iris
@@ -114,7 +115,19 @@ Therefore $ATT=\mu{}^{(1)} - \mu{}^{(0)} = 200-220 = -20$
 \subsubsection{Z-Bias}
 Our second method of simulation is based on adjusting for instrumental biases. We implemented two types of simulations according to the Z-Bias generation process as described in Myers \textit{et al} \cite{myers2011effects}.
 
+The simulation creates examples where there are: one instrumental variable $Z$, one unobserved variable affecting both treatment and outcome $U$, a treatment $X$ and an outcome $Y$. All four variables are binary. These are all described in figure \ref{fig:z_bias_explanation} from the original paper.
 
+\begin{figure}
+    \centering
+    \includegraphics{Paper/images/z_bias_schema.png}
+    \caption{A figure from Myers \textit{et al} depicting the relationships between variables in simulated data.}
+    \label{fig:z_bias_explanation}
+\end{figure} 
+
+There are two methods of simulation we use, an additive and a multiplicative version. In both versions the order of variables simulated is consistent in order to ensure that the risk of outcome would depend directly on $U$ and $X$ and indirectly on $Z$.
+
+In the additive version of the simulation the first variable to be simulated is $Z$ that is created with the probability $P(Z=1)=0.5$.
+Next the unobserved variable is simulated so that $P(U=1|Z)=\gamma{}_0 + \gamma{}_1\cdot{}Z$. Next the treatment is simulation using $P(X=1|U,Z) = \alpha{}_0 + \alpha{}_1 \cdot{} U + \alpha{}_2 \cdot{} Z$. Last we simulate the outcome using $P(Y=1|X,U) = \beta{}_0 + \beta{}_1 \cdot{} U + \beta{}_2 \cdot{} U$
 
 \subsection{Results}
 
