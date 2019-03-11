@@ -78,7 +78,7 @@ class MonteCarloSimulation(object):
             U, X and Y such that
                 P(U=1|Z) = gamma0 + gamma1 * Z
                 P(X=1|U,Z) = alpha0 + alpha1 * U + alpha2 * Z
-                P(Y=1|X,U) = beta0 + beta1 * X + beta2 * U
+                P(Y=1|X,U) = beta0 + beta1 * U + beta2 * X
 
         Notes:
             1. Order of variables simulated is important so that the risk of outcome would depend directly on U and X and indirectly on Z.
@@ -127,7 +127,7 @@ class MonteCarloSimulation(object):
             U, X and Y such that
                 P(U=1|Z) = gamma0 * (gamma1 ^ Z)
                 P(X=1|U,Z) = alpha0 * (alpha1 ^ U) * (alpha2 ^ Z)
-                P(Y=1|X,U) = beta0 * (beta1 ^ X) * (beta2 ^ U)
+                P(Y=1|X,U) = beta0 * (beta1 ^ U) * (beta2 ^ X)
 
         :return: data: numpy ndarray, matrix of matrices
         """
