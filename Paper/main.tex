@@ -115,7 +115,7 @@ Therefore $ATT=\mu{}^{(1)} - \mu{}^{(0)} = 200-220 = -20$
 \subsubsection{Z-Bias}
 Our second method of simulation is based on adjusting for instrumental biases. We implemented two types of simulations according to the Z-Bias generation process as described in Myers \textit{et al} \cite{myers2011effects}.
 
-The simulation creates examples where there are: one instrumental variable $Z$, one unobserved variable affecting both treatment and outcome $U$, a treatment $X$ and an outcome $Y$. All four variables are binary. These are all described in figure \ref{fig:z_bias_explanation} from the original paper.
+The simulation creates examples where there are: one instrumental variable $Z$, one unobserved variable affecting both treatment and outcome $U$, a treatment $X$ and an outcome $Y$. All four variables are binary. These are all described in Figure \ref{fig:z_bias_explanation} from the original paper.
 
 \begin{figure}
     \centering
@@ -136,18 +136,43 @@ $$P(X=1|U,Z)= \alpha_0\cdot(\alpha_1^U)\cdot(\alpha_2^Z)$$
 $$P(Y=1|X,U) = \beta_0 \cdot (\beta_1^U) \cdot (\beta_2^X)$$
 
 \subsection{Results}
-We simulated a data of $10,000$ individuals using the Kang-Schafer method explained above. We then use the forementioned methods to estimate the ATT. Results are depicted in 
+% TODO: Consider adding the figure of Y and T shap values in the Kang-Schafer simulation. This needs to be recreated using the current simulation but is still doable. 
+
+
+We simulated a data of $10,000$ individuals using the Kang-Schafer method explained above. We then use the aforementioned methods to estimate the ATT. For each method we estimated the ATT values using matching on $k$ neighbors, where $k=1,2,...,30$. Results of depicted in Figure \ref{fig:kang_schafer}.
 
 \begin{figure}
     \centering
     \includegraphics[width=\textwidth]{Paper/images/kang_schafer_ATE_estimations_by_neighbor.jpg}
-    \caption{Caption}
-    \label{fig:my_label}
+    \caption{\textbf{ATT Estimations for Kang-Schafer Simulation}: This image shows estimated values of ATT on the Kang-Schafer simulated data. True ATT value is $-20$ and is show in a black solid line. The inverse propensity weighing is marked in a purple solid line. The rest of the estimators are drawn in style according to the distance function used for nearest neighbor matches - Euclidean or Mahalanobis. Color of estimations are saperated by the values used in distance measurements of samples: baseline, based on treatment predicting model, based on outcome predicting model, based on the combination of outcome and treatment prediction models. The $x$ axis is the number of neighbors considered in the nearest neighbor algorithm.}
+    \label{fig:kang_schafer}
 \end{figure}
 
+We can see that IPW estimation gives an opposite direction of error in estimation compared to all other ATT estimation methods. In edition we can see that ATT estimations based solely on SHAP values from the model predicting treatment yielded the worst results. Following are baseline models and models based solely on the SHAP values from the model prediction the outecome. The best results we given with using SHAP values combination from a model predicting the treatment and a model predicting the outcome. 
+
+For all models it is shown that both the Euclidean and the Mahalanobis distance functions yielded similar results, thus showing a minimal effect. 
+
+In addition we can see that although there is some effect on the number of neighbors considered during matching, this effect occurs mostly for very small number of neighbors and is vastly smaller when taking into account more than five neighbors. 
+
+\textbf{TODO: Add Z bias results here. }
+
 \section{Discussion}
+In the framework of potential outcomes an assumption of ignorability is usually made. This assumption relies on independence between treatment and outcome given covariates. However, reality shows that not all covariates should be considered, as some are in fact instrumental variables effecting only the treatment assignment directly. 
+
+Our work aims to create a framework allowing consideration of all covariates while accounting for a difference in effect on treatment and outcome. 
+
+Our results show the the shared consideration of both a model predicting the treatment and a model predicting the outcome can indeed overcome issues of instrumental variables. This added value is shown only be relevant when considering both model, where using each model independently has comparable results to baseline estimators.
+
+In addition our work shows little to no impact of the chosen distance function in case of matching when comparing Euclidean and Mahalanobis distances. We remain confident however that matching function based on domain knowledge will give a better estimation of treatment effects. 
 
 \section{Future Work}
+The ease of use in our work is meant for cases of high-dimensional data as well as simple data. We believe that the framework created will work well on data with many covariates, however have yet to test it.
+
+Another type of data the framework should be tested on is data with more complex connections. Our current simulations are all based on rather simple relations between variables. A comparison to cases where there are covariate effecting treatment and/or outcome indirectly could give a better understanding of the framework's abilities. This is especially true since the entire framework can also be used on more complex predictors.
+
+Our current framework has only one method of combining the SHAP values of a treatment predicting model and an outcome predicting model. The rational behind using the ratio of SHAP values between the two models is to reduce the impact of covariates that effect the treatment assignment but not the outcome. Although fitting said goal, we hope to try additional methods of combining SHAP values. Specifically we considered using a logarithm of the ration, a ratio of logarithms, an additive factor of the values, etc. 
+
+Another field we have yet to explore is the use of the SHAP values in order to perform feature selection on the data. Cases where there are many covariates can at times result in over-fitted models and thus biased predictions of treatment effect. We hope that accounting for the shared effect of a covariate both on the treatment and the outcome could allow to remove uneccessary covariates in a through a causal look. 
 
 \section{References}
 
