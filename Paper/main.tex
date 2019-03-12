@@ -4,28 +4,31 @@
 \usepackage{amssymb}
 \usepackage{graphicx}
 
-\title{Shap-based Average Treatment Effect Calculations}
+\title{SHAP-based Average Treatment Effect Calculations}
 \author{Kalka, Iris
         \and
-        Yacovzada, Nancy
-        \and
-        Rossman, Hagai}
-\date{January 2019}
+        Yacovzada, Nancy}
+        
+\date{March 2019}
 
 \begin{document}
 
 \maketitle
 
 \section{Introduction}
-Causal inference from observational data is a crucial an challenging field of work. Often works rely on assessing potential outcomes in order to estimate treatment effects \cite{neyman1923application}\cite{rubin1974estimating}. Many techniques, such as propensity score (PS) techniques, as formalized by Rosenbaum and Rubin \cite{rosenbaum1983central}, model observed data to predict treatment effects. These techniques enable  controlling confounding in non experimental studies in medicine and epidemiology. 
+Causal inference from observational data is a crucial an challenging field of work. Often works rely on assessing potential outcomes in order to estimate treatment effects \cite{neyman1923application}\cite{rubin1974estimating}. Many techniques, such as propensity score (PS) techniques, as formalized by Rosenbaum and Rubin \cite{rosenbaum1983central}, model observed data in order to predict treatment effects. These techniques enable controlling confounding in non-experimental studies in medicine and epidemiology. 
 
-A central issue facing researchers using such methods is how to select the variables to be included in the model estimating for treatment effect. The bias and variance of the estimated exposure effect can depend strongly on which of these candidate variables are included in the PS model \cite{brookhart2006variable}.
+%TODO: ref 1, is that really what Iris meant to cite? "neyman1923application"
 
-One assumption in the potential outcomes framework is ignorability, meaning that there are no unmeasured confounders \cite{rosenbaum1983central}. More specificly the assumption of ignorability demands that potential outcomes are independent of treatment assignment, conditioned on the set of observed covariates.
+A central issue researchers are facing using such methods is how to select the set of variables to be included in the model estimating for treatment effect. The bias and variance of the estimated treatment effect can depend strongly on which of these candidate variables are included in the PS model \cite{brookhart2006variable}.
 
-A possible limitation of PS methods, as described by Rubin in \cite{rubin1997estimating}, is that a covariate related to treatment assignment but unrelated to the outcome is handled the same as a covariate related to treatment but also strongly related to outcome. Such inclusion of irrelevant covariates might reduce the efficiency of an estimated treatment effect \cite{10.1093/biomet/asx009}. In some cases the use of pretreatment covariates might even increase bias of treatment effect estimators.
+One assumption in the potential outcomes framework is ignorability, meaning that there are no unmeasured confounders \cite{rosenbaum1983central}. More specifically, the assumption of ignorability demands that potential outcomes are independent of treatment assignment, conditioned on the set of observed covariates.
 
-Our work is based on an assumption that every covariate can be treated as a covariate effecting both the treatment and the outcome. We believe that the size of the effect can be computed and taken into account such that pretreatment covariates are nearly ignored whereas other treatments are taken into account. 
+A possible limitation of PS methods, as described by Rubin in \cite{rubin1997estimating}, is that a covariate related to treatment assignment but unrelated to the outcome is handled the same as a covariate related to treatment but also strongly related to outcome. Such inclusion of irrelevant covariates might reduce the efficiency of an estimated treatment effect \cite{10.1093/biomet/asx009}. In some cases, the use of pretreatment covariates might even increase bias of treatment effect estimators.
+
+Our work is based on an assumption that every covariate can be treated as a covariate effecting both the treatment and the outcome. 
+%TODO: REFINE
+We believe that the size of the effect can be computed and taken into account such that pretreatment covariates are nearly ignored whereas other treatments are taken into account. 
 
 
 \section{Methods}
