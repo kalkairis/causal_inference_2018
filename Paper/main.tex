@@ -4,6 +4,7 @@
 \usepackage{amssymb}
 \usepackage{graphicx}
 \usepackage{hyperref}
+\usepackage{float}
 
 \title{Estimating SHAP-based Treatment Effects}
 \author{Kalka, Iris
@@ -17,9 +18,11 @@
 \maketitle
 
 \section{Introduction}
+
+%TODO: REFINE INTRODUCTION!
+
 Causal inference from observational data is a crucial an challenging field of work. Often works rely on assessing potential outcomes in order to estimate treatment effects \cite{rubin1974estimating}. Many techniques, such as propensity score (PS) techniques, as formalized by Rosenbaum and Rubin \cite{rosenbaum1983central}, model observed data in order to predict treatment effects. These techniques enable controlling confounding in non-experimental studies in medicine and epidemiology. 
 
-%TODO: ref 1, is that really what Iris meant to cite? "neyman1923application"
 
 A central issue researchers are facing using such methods is how to select the set of variables to be included in the model estimating for treatment effect. The bias and variance of the estimated treatment effect can depend strongly on which of these candidate variables are included in the PS model \cite{brookhart2006variable}.
 
@@ -28,10 +31,10 @@ One assumption in the potential outcomes framework is ignorability, meaning that
 A possible limitation of PS methods, as described by Rubin in \cite{rubin1997estimating}, is that a covariate related to treatment assignment but unrelated to the outcome is handled the same as a covariate related to treatment but also strongly related to outcome. Such inclusion of irrelevant covariates might reduce the efficiency of an estimated treatment effect \cite{10.1093/biomet/asx009}. In some cases, the use of pretreatment covariates might even increase bias of treatment effect estimators.
 
 Our work is based on an assumption that every covariate can be treated as a covariate effecting both the treatment and the outcome. 
-%TODO: REFINE
-We believe that the size of the effect can be computed and taken into account such that pretreatment covariates are nearly ignored whereas other treatments are taken into account. 
+In this work we wish to examine several approaches for estimating the Average Treatment Effect for Treated (ATT) in studies with observed and unobserved variables that are associated with both treatment and outcome. We believe that during the estimation of the potential outcomes those variables may confound the targeted causal effect. 
+We propose a novel approach to incorporate features importance scores in the construction of the distance matrix in which is used in the matching operation. These scores are based on a method called  SHapley Additive exPlanations (SHAP), described in details in \cite{lundberg2017unified}. 
+We compere eight different approaches for obtaining pair-wise distances and test them on three types of simulation data. 
 
-% FROM THE MEIR PAOER In studies of exposure effect, measured and unmeasured factors that are associated with both exposure and outcome may confound the targeted causal effect. Estimating the exposure effect conditional on all confounding factors yields consistent estimates (1–4), so choosing which variables to use for adjustment in studies with many measured covariates is an important step for ensuring the validity of effect estimates.
 
 \section{Methods}
 We compare treatment effect evaluation using several methods. We separate the methods to baseline methods already available in the literature: methods based on an estimator predicting the treatment; methods based on an estimator predicting the outcome; and methods based on two estimators one predicting treatment and the other predicting outcome.
@@ -112,11 +115,11 @@ Distances between individuals are computed using either Euclidean or Mahalanobis
 
 \subsubsection{Z-Bias}
 Recent theoretical studies have shown that conditioning on an instrumental variable (IV), a variable that is associated with the treatment but not associated with outcome except through treatment, can increase both bias and variance of treatment effect estimates. 
-We follow the work from Myers \textit{et al} \cite{myers2011effects} where they suggested the "Z-Bias simulations", designed to provide insight into the problem of conditioning on potential IVs and adjusting for instrumental biases. 
+We follow the work from Myers \textit{et al} \cite{myers2011effects} where they suggested the "Z-Bias simulations", Monte Carlo simulation designed to provide insight into the problem of conditioning on potential IVs and adjusting for instrumental biases. 
 Their results indicated that effect estimates which are conditional on a perfect IV or near-IV may have larger bias and variance than the unconditional estimate. However, they showed that in most scenarios considered, the increases in error due to conditioning were small compared with the total estimation error. Hence, in these cases minimizing unmeasured confounding should be the priority when selecting variables for adjustment, even at the risk of conditioning on IVs.
 The simulation creates examples where there is: an instrumental variable $Z$, an unobserved variable affecting both treatment and outcome $U$, a treatment $X$ and an outcome $Y$. All four variables are assumed to be binary. The causal graph is described in Figure \ref{fig:z_bias_explanation} from the original paper.
 
-\begin{figure}
+\begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{Paper/images/z_bias_schema_complex.png}
     \caption{A figure from Myers \textit{et al} depicting the relationships between variables in simulated data.}
@@ -133,6 +136,13 @@ $$P(Z=1)=0.5$$
 $$P(U=1|Z)=\gamma_0\cdot{}(\gamma_1^Z)$$
 $$P(X=1|U,Z)= \alpha_0\cdot(\alpha_1^U)\cdot(\alpha_2^Z)$$
 $$P(Y=1|X,U) = \beta_0 \cdot (\beta_1^U) \cdot (\beta_2^X)$$
+
+The true "exposure effect" and target of estimation is $\beta_2$. 
+For simplicity and to reflect a common study framework, all variables are binary.
+The measured covariate $Z$ may act as a confounder or as an IV for the treatment-outcome pair $(X, Y)$.
+Note that $Z$ is not a perfect instrument because it is associated with the unobsereved confounder $U$ through $\gamma_1$. 
+However, by varying the value of $\gamma_1$, we can explore the impacts of conditioning on $Z$ when it is a perfect instrument and when it is a near-instrument or confounder.
+A relatively large values of $\gamma_1$ can be considered to compare the risks of adjusting for an IV with the benefits of adjusting for a real confounder.
 
 \subsubsection{Kang-Schafer}
 Our first method of simulation is the Kang-Schafer method for creating simulated data \cite{kang2007demystifying}. This method assigns four random covariates for every individual ($x_i^j~\mathcal{N}(0,1)$ for every $i\in{}\{1,2,3,4\}$). 
@@ -160,28 +170,97 @@ Therefore $ATT=\mu{}^{(1)} - \mu{}^{(0)} = 200-220 = -20$
 %TODO: is this actually -20?
 
 
+
+
 \subsection{Results}
 We simulated data of 10,000 individuals using every time a different simulation approach as explained below. 
 We then use the aforementioned methods to estimate the ATT.
 For each method we estimated the ATT values using matching on $k$-neighbors, where $k = 1, 2, ..., 30$. 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
 \subsubsection{Z-Bias}
-We can see that IPW estimation gives an opposite direction of error in estimation compared to all other ATT estimation methods. In edition we can see
-that ATT estimations based solely on SHAP values from the model predicting
-treatment yielded the worst results. Following are baseline models and models based solely on the SHAP values from the model prediction the outecome.
-The best results we given with using SHAP values combination from a model
-predicting the treatment and a model predicting the outcome.
-For all models it is shown that both the Euclidean and the Mahalanobis
-distance functions yielded similar results, thus showing a minimal effect.
-In addition we can see that although there is some effect on the number of
-neighbors considered during matching, this effect occurs mostly for very small
-number of neighbors and is vastly smaller when taking into account more than
-five neighbors.
+First, we simulated data from the causal diagram as presented in Figure \ref{fig:z_bias_explanation} with the following coefficients:
+\begin{itemize}
+    \item $\gamma_0 = .3$
+    \item $\gamma_1 = .06$
+    \item $\alpha_0 = .3$
+    \item $\alpha_1 = .18$
+    \item $\alpha_2 = .18$ 
+    \item $\beta_0 = .2$
+    \item $\beta_1 = .36$ 
+    \item $\beta_2 = .2$
+\end{itemize}
+
+In the case of \textbf{Z-bias additive ATT estimation}, we can see that the worst estimation was obtained by the estimations based on two classifiers, the outcome prediction $\mathcal{M_Y}$ and treatment prediction $\mathcal{M_T}$.
+The following estimations resulted identical estimation error, regardless of the distance function, and they also are the best estimations: Matching, SHAP-based  treatment prediction $\mathcal{M_T}$ and SHAP-based outcome prediction $\mathcal{M_Y}$. 
+The results suggest that there is no improvement in using the SHAP-based distance matrix compered to standard matching with propensity score and in fact the IPW baseline method was the second based estimator. 
+Full results can be found in the IPython notebook. 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{Paper/images/z_bias_additive_ATT_estimations_by_k_neighbors.png}
+    \caption{Z bias additive ATT estimations by number of k}
+    \label{fig:z_bias_additive}
+\end{figure}
+
+
+In the case of \textbf{Z-bias multiplicative ATT estimation}, we can see that the worst estimation was obtained by the IPW baseline method. 
+The following estimations resulted identical estimation error, regardless of the distance function, and they also are the best estimations: Matching, SHAP-based  treatment prediction $\mathcal{M_T}$ and SHAP-based outcome prediction $\mathcal{M_Y}$. 
+The estimations based on two classifiers, the outcome prediction $\mathcal{M_Y}$ and treatment prediction $\mathcal{M_T}$, resulted with higher estimation error than these methods but lower than IPW. 
+The results suggest that there is no improvement in using the SHAP-based distance matrix compered to standard matching with propensity score. Full results can be found in the IPython notebook. 
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{Paper/images/z_bias_multiplicative_ATT_estimations_by_k_neighbors.png}
+    \caption{Z bias multiplicative ATT estimations by number of k}
+    \label{fig:z_bias_multi}
+\end{figure}
+
+
+Second, we simulated data with the following simulation coefficients:
+\begin{itemize}
+    \item $\gamma_0 = .3$
+    \item $\gamma_1 = .06$
+    \item $\alpha_0 = .3$
+    \item $\alpha_1 = .18$
+    \item $\alpha_2 = 0$ 
+    \item $\beta_0 = .2$
+    \item $\beta_1 = .0$ 
+    \item $\beta_2 = .2$
+\end{itemize}
+Note that here we assigned $\beta_1=0$ and $\alpha_2 = 0$ which result that $Z$ is not a IV (we cancelled the arrow from $Z$ to $X$). In addition, under these coefficients the unobserved variable $U$ doesn't effect the outcome.  
+Results for the additive data are presented in Figure \ref{fig:z_bias_add_no_alpha2}. 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{Paper/images/z_bias_additive_ATT_estimations_by_k_neighbors_no_alpha2.png}
+    \caption{Z bias additive ATT estimations by number of k neighbors - No IV}
+    \label{fig:z_bias_add_no_alpha2}
+\end{figure}
+
+Results for the multiplicative data are presented in Figure \ref{fig:z_bias_multi_no_alpha2}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{Paper/images/z_bias_multiplicative_ATT_estimations_by_k_neighbors_no_alpha2.png}
+    \caption{Z bias multiplicative ATT estimations by number of k - No IV}
+    \label{fig:z_bias_multi_no_alpha2}
+\end{figure}
+
+For all models it is shown that both the Euclidean and the Mahalanobis distance functions yielded similar results.
+
+% TODO: effect of the number of neighbors considered during matching
+%TODO: BIAS VARIANCE ANALYSIS!
+
+
 
 \subsubsection{Kang-Schafer method}
-Results of depicted in Figure 2. We can see that IPW estimation gives an opposite direction of error in estimation compared to all other ATT estimation methods. In edition we can see
-that ATT estimations based solely on SHAP values from the model predicting
-treatment yielded the worst results. Following are baseline models and models based solely on the SHAP values from the model prediction the outecome.
+Results of depicted in Figure \ref{fig:kang_schafer}. 
+We can see that IPW estimation gives an opposite direction of error in estimation compared to all other ATT estimation methods. In edition we can see that ATT estimations based solely on SHAP values from the model predicting treatment yielded the worst results. 
+Following are baseline models and models based solely on the SHAP values from the model prediction the outecome.
 The best results we given with using SHAP values combination from a model
 predicting the treatment and a model predicting the outcome.
 For all models it is shown that both the Euclidean and the Mahalanobis
@@ -190,13 +269,12 @@ In addition we can see that although there is some effect on the number of
 neighbors considered during matching, this effect occurs mostly for very small
 number of neighbors and is vastly smaller when taking into account more than
 five neighbors.
-TODO: Ad
 
 % TODO: Consider adding the figure of Y and T shap values in the Kang-Schafer simulation. This needs to be recreated using the current simulation but is still doable. 
 
 We simulated a data of $10,000$ individuals using the Kang-Schafer method explained above. We then use the aforementioned methods to estimate the ATT. For each method we estimated the ATT values using matching on $k$ neighbors, where $k=1,2,...,30$. Results of depicted in Figure \ref{fig:kang_schafer}.
 
-\begin{figure}
+\begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{Paper/images/kang_schafer_ATE_estimations_by_neighbor.jpg}
     \caption{\textbf{ATT Estimations for Kang-Schafer Simulation}: This image shows estimated values of ATT on the Kang-Schafer simulated data. True ATT value is $-20$ and is show in a black solid line. The inverse propensity weighing is marked in a purple solid line. The rest of the estimators are drawn in style according to the distance function used for nearest neighbor matches - Euclidean or Mahalanobis. Color of estimations are saperated by the values used in distance measurements of samples: baseline, based on treatment predicting model, based on outcome predicting model, based on the combination of outcome and treatment prediction models. The $x$ axis is the number of neighbors considered in the nearest neighbor algorithm.}
@@ -212,9 +290,11 @@ In addition we can see that although there is some effect on the number of neigh
 \section{Discussion}
 In the framework of potential outcomes an assumption of ignorability is usually made. This assumption relies on independence between treatment and outcome given covariates. However, reality shows that not all covariates should be considered, as some are in fact instrumental variables effecting only the treatment assignment directly. 
 
-Our work aims to create a framework allowing consideration of all covariates while accounting for a difference in effect on treatment and outcome. 
+Our work aims to create a framework allowing consideration of all covariates while accounting for a difference in effect on treatment and outcome. It proposes a method to improve propensity-based matching by integrating the SHAP algorithm, a method that gives importance score for every variable in the model for every individual in the cohort.  
 
-Our results show the the shared consideration of both a model predicting the treatment and a model predicting the outcome can indeed overcome issues of instrumental variables. This added value is shown only be relevant when considering both model, where using each model independently has comparable results to baseline estimators.
+In the case of Z-bias MC simulation our results showed no benefit using the SHAP scores as inout to the distance metric. In addition, both the Euclidean and the Mahalanobis distances yielded the same estimation curves for every $k$. Surprisingly, the shared consideration of both a model predicting the treatment and a model predicting the outcome didn't overcome the issue of instrumental variables and hence didn't add value compared to using each model independently.
+
+However, for the Kang-Schafer simulation our results show the the shared consideration of both a model predicting the treatment and a model predicting the outcome can indeed overcome issues of instrumental variables. This added value is shown only be relevant when considering both model, where using each model independently has comparable results to baseline estimators.
 
 In addition our work shows little to no impact of the chosen distance function in case of matching when comparing Euclidean and Mahalanobis distances. We remain confident however that matching function based on domain knowledge will give a better estimation of treatment effects. 
 
@@ -227,7 +307,7 @@ Our current framework has only one method of combining the SHAP values of a trea
 
 Another field we have yet to explore is the use of the SHAP values in order to perform feature selection on the data. Cases where there are many covariates can at times result in over-fitted models and thus biased predictions of treatment effect. We hope that accounting for the shared effect of a covariate both on the treatment and the outcome could allow to remove uneccessary covariates in a through a causal look. 
 \section{Code}
-Link to code in \href{https://github.com/kalkairis/causal_inference_2018}{GitHub}
+Link to Python code on \href{https://github.com/kalkairis/causal_inference_2018}{GitHub}
 \section{References}
 
 \bibliographystyle{unsrt}

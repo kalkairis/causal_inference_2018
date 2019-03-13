@@ -53,9 +53,9 @@ class MonteCarloSimulation(object):
         self.gamma1 = .06  # 0.006, 0.24, 0.6
         self.alpha0 = .3
         self.alpha1 = .18  # 0.06, 0.018, 0.33
-        self.alpha2 = 0  # 0.06, 0.18, 0.33
+        self.alpha2 = .18  # 0.06, 0.18, 0.33
         self.beta0 = .2  # .01
-        self.beta1 = .0  # 0.08, 0.36, 0.5
+        self.beta1 = .36  # 0.08, 0.36, 0.5
         self.beta2 = .2  # .2
 
         self.additive_data = self.sim_additive_model()
