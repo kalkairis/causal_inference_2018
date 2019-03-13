@@ -3,8 +3,9 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{graphicx}
+\usepackage{hyperref}
 
-\title{SHAP-based Average Treatment Effect Calculations}
+\title{Estimating SHAP-based Treatment Effects}
 \author{Kalka, Iris
         \and
         Yacovzada, Nancy}
@@ -16,7 +17,7 @@
 \maketitle
 
 \section{Introduction}
-Causal inference from observational data is a crucial an challenging field of work. Often works rely on assessing potential outcomes in order to estimate treatment effects \cite{neyman1923application}\cite{rubin1974estimating}. Many techniques, such as propensity score (PS) techniques, as formalized by Rosenbaum and Rubin \cite{rosenbaum1983central}, model observed data in order to predict treatment effects. These techniques enable controlling confounding in non-experimental studies in medicine and epidemiology. 
+Causal inference from observational data is a crucial an challenging field of work. Often works rely on assessing potential outcomes in order to estimate treatment effects \cite{rubin1974estimating}. Many techniques, such as propensity score (PS) techniques, as formalized by Rosenbaum and Rubin \cite{rosenbaum1983central}, model observed data in order to predict treatment effects. These techniques enable controlling confounding in non-experimental studies in medicine and epidemiology. 
 
 %TODO: ref 1, is that really what Iris meant to cite? "neyman1923application"
 
@@ -30,18 +31,20 @@ Our work is based on an assumption that every covariate can be treated as a cova
 %TODO: REFINE
 We believe that the size of the effect can be computed and taken into account such that pretreatment covariates are nearly ignored whereas other treatments are taken into account. 
 
+% FROM THE MEIR PAOER In studies of exposure effect, measured and unmeasured factors that are associated with both exposure and outcome may confound the targeted causal effect. Estimating the exposure effect conditional on all confounding factors yields consistent estimates (1–4), so choosing which variables to use for adjustment in studies with many measured covariates is an important step for ensuring the validity of effect estimates.
 
 \section{Methods}
 We compare treatment effect evaluation using several methods. We separate the methods to baseline methods already available in the literature: methods based on an estimator predicting the treatment; methods based on an estimator predicting the outcome; and methods based on two estimators one predicting treatment and the other predicting outcome.
 
 We compare methods by looking at the predicted Average Treatement Effect on Treated (ATT) compared with the true known ATT. Let us recall the definition of ATT:
 \begin{equation*}
-    ATT = \mathbb{E}[]Y_1 - Y_0 | T=1]
+    ATT = \mathbb{E}[Y_1 - Y_0 | T=1]
 \end{equation*}
 
 For all of these evaluations we used the Scikit-Learn gradient boosting predictors with default parameters \cite{scikit-learn}. 
 
 \subsection{Baseline}
+\subsubsection{Inverse Propensity Score Weighting}
 Our first method of estimating ATT is Inverse Propensity Score Weighting (IPW).
 We use the following equation for calculation of ATT:
 \begin{equation*}
@@ -59,37 +62,78 @@ Under strongly ignorable treatment assumption the potential outcomes $Y_0$, $Y_1
 
 Thus we use the propensity score and the inverse probability of treatment weighting to compute ATT \cite{abdia2017propensity}. 
 
-The two other methods of baseline estimation relay on matching functions. For every treated individual we locate the most similar untreated individual. Thus estimating the treatment effect for every treated individual. This method uses the Scikit-learn Nearest neighbors tool for identification of the most similar individual \cite{scikit-learn}. 
-
-Given a distance matrix between all individuals ATT is computed through matching by calculating the average difference in outcome for every treated individual. This is done by the difference between the individual's true outcome and the mean outcome of $k$ nearest untreated neighbors based on the given distance matrix. The total ATT is then the average of all treated individuals' average difference in outcome.
-
-Distance (and inversely similarity) between individuals is computed based solely on the propensity score computed for each individual. The two methods of distance used by us are Euclidean distance and Mahalanobis distance.
-
+\subsubsection{Matching}
+We utilize an additional method which serves as baseline estimation that relies on matching functions. Matching functions exploits known outcomes $Y_0$ in order to estimate the $T_0$ of the treated.
+For every treated individual $(T=1)$ in the cohort, we calculate his potential outcome $\bar{Y_0}$  as follows: 
+\begin{itemize}
+    \item Find his most similar $k$ untreated individuals $(T=0)$ 
+    \item Calculate $\bar{Y_0}$ - the mean outcome of the $k$ closest neighbors 
+\end{itemize}
+Now, for every treated individual we calculate his treatment effect $\widehat{T}$ by subtracting the mean outcome $\bar{Y_0}$ with the individual's true outcome $Y_1$. 
+Thus, given a distance matrix between all individuals we use matching to approximate the treatment effect for every treated individual. 
+These estimates allow us to calculate the total ATT, as explained above, by average of $\widehat{T}$ of all treated individuals'. 
+Distance (and inversely, similarity) between individuals is computed based solely on the propensity score computed for each individual. 
+The distance function we use here is either the Euclidean distance or Mahalanobis distance.
+We use the Scikit-Learn K-Nearest Neighbors algorithm for identification of the most similar individuals \cite{scikit-learn}. 
 
 \subsection{Based on treatment prediction}
-When accounting for the difference in effects of each covariate we chose to look at the feature importances in the treatment predictor. In order to make the different features importances comparable we use SHapley Additive exPlanations (SHAP) values \cite{lundberg2017unified}. These values are scalar values explaining the individual contribution of each covariate for each individual in the estimation of the treatment. 
+Here we build a single "treatment predictor" $\mathcal{M_T}$: a classifier that uses the $N\times{}M$ matrix of covariates to predict the treatment. 
+In order to account for the difference in effects of each covariate we chose to look at the features importance obtained based on this model. 
+To make the different features importances comparable we use SHapley Additive exPlanations (SHAP) values \cite{lundberg2017unified}. 
+These values are scalar values, explaining the individual contribution of each covariate for each individual in the estimation of the treatment. 
 
-Given a matrix of $N\times{}M$ covariates (where $N$ is the number of individuals and $M$ is the number of covariates) we create a single predictor $\mathcal{M}$ from the covariates to the treatment (marked a as a binary value). We then compute the SHAP values of $\mathcal{M}$ for every individual resulting in an $N\times{}M$ matrix. 
+Given a matrix of $N\times{}M$ covariates (where $N$ is the number of individuals and $M$ is the number of covariates) we create a single predictor $\mathcal{M_T}$ from the covariates to the treatment (marked a as a binary value). We then compute the SHAP values of $\mathcal{M_T}$ for every individual resulting in an $N\times{}M$ matrix $S_T$. 
 
-Our distances are computed based on the SHAp values matrix using either Euclidean of Mahalanobis distance for every two individuals. Afterwards the ATT is calculated using matching. 
+The distances between individuals are computed based on the SHAP values matrix $S$, using either Euclidean of Mahalanobis distance for every two individuals. 
+Finally, the ATT is calculated using matching. 
 
 \subsection{Based on outcome prediction}
-We create a single predictor that predicts the outcome given both an $N\times{}M$ matrix of covariates and a boolean vector of length $N$ of the treatment. After prediction of outcome we compute the SHAP values of all input values, giving us a matrix of size $N\times{}(M+1)$. 
+Here we build a single "outcome predictor" $\mathcal{M_Y}$: a classifier that predicts the outcome given both $N\times{}M$ matrix of covariates and a boolean vector of length $N$ of the treatment. 
+Based on this prediction model we compute the SHAP values of all input values which yields a $N\times{}(M+1)$ matrix. 
 
-Our computed distance should be reflective only on pretreatment features. It should not account for whether an individual is treated or not. Therefore, we remove the SHAP value respective of the treatment assignment, yielding us a matrix of $N\times{}M$. 
+The distances between individuals are computed based on the SHAP values matrix $S$, using either Euclidean of Mahalanobis distance for every two individuals. 
+Our computed distance should be reflective only on pretreatment features, regardless if the individual is received treatment or not. Therefore, we remove the SHAP value respective of the treatment assignment, yielding us a matrix $S_Y$ of $N\times{}M$. 
 
-The given matrix is then used to compute distances either through Euclidean distance of Mahalanobis distance between every two individuals. ATT is then calculated using matching based on the distance measures. 
+The given matrix is then used to compute distances either through Euclidean distance of Mahalanobis distance between every two individuals. 
+ATT is then calculated using matching based on the distance matrix. 
 
 \subsection{Based on treatment prediction and outcome prediction}
-We create two predictors. One predictor $\mathcal{M}_T$ predicts the treatment assignment from covariates.The second predictor $mathcal{M}_Y$ predicts the outcome from both the covariates and the treatment assignment. 
+We create two predictors. 
+One predictor $\mathcal{M_T}$ predicts the treatment assignment from covariates.
+The second predictor $mathcal{M}_Y$ predicts the outcome from both the covariates and the treatment assignment. 
 
 We compute the SHAP values from both treatment and outcome predictions ($S_T$ and $S_Y$ respectively). In order to have comparable SHAP values we remove the column related to treatment from the $S_Y$ matrix. 
 
-At this point each individual is represented with two vectors of length $M$ (number of covariates). We then join the vectors by dividing the values in $S_Y$ by those in $S_T$ in an element-wise division. Thus each person is represented with a single combined vector of length $M$.
+At this point each individual is represented with two vectors of length $M$ (number of covariates). We then join the vectors by dividing the values in $S_Y$ by those in $S_T$ in an element-wise division. Thus, each individual is represented with a single combined vector of length $M$.
 
 Distances between individuals are computed using either Euclidean or Mahalanobis distances on combined vectors. ATT is computed using matching based on the distance matrix.
 
 \subsection{Simulation}
+
+\subsubsection{Z-Bias}
+Recent theoretical studies have shown that conditioning on an instrumental variable (IV), a variable that is associated with the treatment but not associated with outcome except through treatment, can increase both bias and variance of treatment effect estimates. 
+We follow the work from Myers \textit{et al} \cite{myers2011effects} where they suggested the "Z-Bias simulations", designed to provide insight into the problem of conditioning on potential IVs and adjusting for instrumental biases. 
+Their results indicated that effect estimates which are conditional on a perfect IV or near-IV may have larger bias and variance than the unconditional estimate. However, they showed that in most scenarios considered, the increases in error due to conditioning were small compared with the total estimation error. Hence, in these cases minimizing unmeasured confounding should be the priority when selecting variables for adjustment, even at the risk of conditioning on IVs.
+The simulation creates examples where there is: an instrumental variable $Z$, an unobserved variable affecting both treatment and outcome $U$, a treatment $X$ and an outcome $Y$. All four variables are assumed to be binary. The causal graph is described in Figure \ref{fig:z_bias_explanation} from the original paper.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\textwidth]{Paper/images/z_bias_schema_complex.png}
+    \caption{A figure from Myers \textit{et al} depicting the relationships between variables in simulated data.}
+    \label{fig:z_bias_explanation}
+\end{figure} 
+
+There are two methods of simulation we use, an additive and a multiplicative version. In both versions the order of variables simulated is consistent in order to ensure that the risk of outcome would depend directly on $U$ and $X$ and indirectly on $Z$.
+
+In the \textbf{additive} version of the simulation the first variable to be simulated is $Z$ that is created with the probability $P(Z=1)=0.5$.
+Next the unobserved variable is simulated so that $P(U=1|Z)=\gamma{}_0 + \gamma{}_1\cdot{}Z$. Next the treatment is simulation using $P(X=1|U,Z) = \alpha{}_0 + \alpha{}_1 \cdot{} U + \alpha{}_2 \cdot{} Z$. Last we simulate the outcome using $P(Y=1|X,U) = \beta{}_0 + \beta{}_1 \cdot{} U + \beta{}_2 \cdot{} U$. 
+
+In the \textbf{multiplicative} version of the simulation the order of simulation is identical to that in the additive version. However, probabilities are computed in a different format as is explained in the following equations:
+$$P(Z=1)=0.5$$
+$$P(U=1|Z)=\gamma_0\cdot{}(\gamma_1^Z)$$
+$$P(X=1|U,Z)= \alpha_0\cdot(\alpha_1^U)\cdot(\alpha_2^Z)$$
+$$P(Y=1|X,U) = \beta_0 \cdot (\beta_1^U) \cdot (\beta_2^X)$$
+
 \subsubsection{Kang-Schafer}
 Our first method of simulation is the Kang-Schafer method for creating simulated data \cite{kang2007demystifying}. This method assigns four random covariates for every individual ($x_i^j~\mathcal{N}(0,1)$ for every $i\in{}\{1,2,3,4\}$). 
 Propensity is then computed in the following way:
@@ -115,32 +159,40 @@ Under the strong ignorability assumption and equations from the Kang-Schafer pap
 Therefore $ATT=\mu{}^{(1)} - \mu{}^{(0)} = 200-220 = -20$ 
 %TODO: is this actually -20?
 
-\subsubsection{Z-Bias}
-Our second method of simulation is based on adjusting for instrumental biases. We implemented two types of simulations according to the Z-Bias generation process as described in Myers \textit{et al} \cite{myers2011effects}.
-
-The simulation creates examples where there are: one instrumental variable $Z$, one unobserved variable affecting both treatment and outcome $U$, a treatment $X$ and an outcome $Y$. All four variables are binary. These are all described in Figure \ref{fig:z_bias_explanation} from the original paper.
-
-\begin{figure}
-    \centering
-    \includegraphics[width=\textwidth]{Paper/images/z_bias_schema_complex.png}
-    \caption{A figure from Myers \textit{et al} depicting the relationships between variables in simulated data.}
-    \label{fig:z_bias_explanation}
-\end{figure} 
-
-There are two methods of simulation we use, an additive and a multiplicative version. In both versions the order of variables simulated is consistent in order to ensure that the risk of outcome would depend directly on $U$ and $X$ and indirectly on $Z$.
-
-In the additive version of the simulation the first variable to be simulated is $Z$ that is created with the probability $P(Z=1)=0.5$.
-Next the unobserved variable is simulated so that $P(U=1|Z)=\gamma{}_0 + \gamma{}_1\cdot{}Z$. Next the treatment is simulation using $P(X=1|U,Z) = \alpha{}_0 + \alpha{}_1 \cdot{} U + \alpha{}_2 \cdot{} Z$. Last we simulate the outcome using $P(Y=1|X,U) = \beta{}_0 + \beta{}_1 \cdot{} U + \beta{}_2 \cdot{} U$.
-
-In the multiplicative version of the simulation the order of simulation is identical to that in the additive version. Probabilities are computed in a different format as is explained in the following equations:
-$$P(Z=1)=0.5$$
-$$P(U=1|Z)=\gamma_0\cdot{}(\gamma_1^Z)$$
-$$P(X=1|U,Z)= \alpha_0\cdot(\alpha_1^U)\cdot(\alpha_2^Z)$$
-$$P(Y=1|X,U) = \beta_0 \cdot (\beta_1^U) \cdot (\beta_2^X)$$
 
 \subsection{Results}
-% TODO: Consider adding the figure of Y and T shap values in the Kang-Schafer simulation. This needs to be recreated using the current simulation but is still doable. 
+We simulated data of 10,000 individuals using every time a different simulation approach as explained below. 
+We then use the aforementioned methods to estimate the ATT.
+For each method we estimated the ATT values using matching on $k$-neighbors, where $k = 1, 2, ..., 30$. 
 
+\subsubsection{Z-Bias}
+We can see that IPW estimation gives an opposite direction of error in estimation compared to all other ATT estimation methods. In edition we can see
+that ATT estimations based solely on SHAP values from the model predicting
+treatment yielded the worst results. Following are baseline models and models based solely on the SHAP values from the model prediction the outecome.
+The best results we given with using SHAP values combination from a model
+predicting the treatment and a model predicting the outcome.
+For all models it is shown that both the Euclidean and the Mahalanobis
+distance functions yielded similar results, thus showing a minimal effect.
+In addition we can see that although there is some effect on the number of
+neighbors considered during matching, this effect occurs mostly for very small
+number of neighbors and is vastly smaller when taking into account more than
+five neighbors.
+
+\subsubsection{Kang-Schafer method}
+Results of depicted in Figure 2. We can see that IPW estimation gives an opposite direction of error in estimation compared to all other ATT estimation methods. In edition we can see
+that ATT estimations based solely on SHAP values from the model predicting
+treatment yielded the worst results. Following are baseline models and models based solely on the SHAP values from the model prediction the outecome.
+The best results we given with using SHAP values combination from a model
+predicting the treatment and a model predicting the outcome.
+For all models it is shown that both the Euclidean and the Mahalanobis
+distance functions yielded similar results, thus showing a minimal effect.
+In addition we can see that although there is some effect on the number of
+neighbors considered during matching, this effect occurs mostly for very small
+number of neighbors and is vastly smaller when taking into account more than
+five neighbors.
+TODO: Ad
+
+% TODO: Consider adding the figure of Y and T shap values in the Kang-Schafer simulation. This needs to be recreated using the current simulation but is still doable. 
 
 We simulated a data of $10,000$ individuals using the Kang-Schafer method explained above. We then use the aforementioned methods to estimate the ATT. For each method we estimated the ATT values using matching on $k$ neighbors, where $k=1,2,...,30$. Results of depicted in Figure \ref{fig:kang_schafer}.
 
@@ -156,8 +208,6 @@ We can see that IPW estimation gives an opposite direction of error in estimatio
 For all models it is shown that both the Euclidean and the Mahalanobis distance functions yielded similar results, thus showing a minimal effect. 
 
 In addition we can see that although there is some effect on the number of neighbors considered during matching, this effect occurs mostly for very small number of neighbors and is vastly smaller when taking into account more than five neighbors. 
-
-\textbf{TODO: Add Z bias results here. }
 
 \section{Discussion}
 In the framework of potential outcomes an assumption of ignorability is usually made. This assumption relies on independence between treatment and outcome given covariates. However, reality shows that not all covariates should be considered, as some are in fact instrumental variables effecting only the treatment assignment directly. 
@@ -176,7 +226,8 @@ Another type of data the framework should be tested on is data with more complex
 Our current framework has only one method of combining the SHAP values of a treatment predicting model and an outcome predicting model. The rational behind using the ratio of SHAP values between the two models is to reduce the impact of covariates that effect the treatment assignment but not the outcome. Although fitting said goal, we hope to try additional methods of combining SHAP values. Specifically we considered using a logarithm of the ration, a ratio of logarithms, an additive factor of the values, etc. 
 
 Another field we have yet to explore is the use of the SHAP values in order to perform feature selection on the data. Cases where there are many covariates can at times result in over-fitted models and thus biased predictions of treatment effect. We hope that accounting for the shared effect of a covariate both on the treatment and the outcome could allow to remove uneccessary covariates in a through a causal look. 
-
+\section{Code}
+Link to code in \href{https://github.com/kalkairis/causal_inference_2018}{GitHub}
 \section{References}
 
 \bibliographystyle{unsrt}
